@@ -152,6 +152,7 @@ func (r *AggregateRepository[T, R]) Save(
 	}
 
 	originalVersion := agg.Version() - len(agg.StateChanges())
+	metadata := MetadataFromContext(ctx)
 	events := make([]*Event, 0, len(agg.StateChanges()))
 
 	for i, stateChange := range agg.StateChanges() {
@@ -167,7 +168,7 @@ func (r *AggregateRepository[T, R]) Save(
 			ID:               id.String(),
 			AggregateVersion: originalVersion + i + 1,
 			Timestamp:        time.Now(),
-			Metadata:         MetadataFromContext(ctx),
+			Metadata:         metadata,
 			Data:             data,
 		})
 	}
