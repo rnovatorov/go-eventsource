@@ -1,4 +1,4 @@
-package eventsourcing
+package eventsource
 
 type Aggregate[T any, R aggregateRoot[T]] struct {
 	id           string

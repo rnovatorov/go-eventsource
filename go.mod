@@ -1,4 +1,4 @@
-module github.com/rnovatorov/go-eventsourcing
+module github.com/rnovatorov/go-eventsource
 
 go 1.23.1
 

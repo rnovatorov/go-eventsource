@@ -1,4 +1,4 @@
-package eventsourcing
+package eventsource
 
 import "google.golang.org/protobuf/proto"
 
