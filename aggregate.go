@@ -23,7 +23,7 @@ func (a *Aggregate[T, R]) StateChanges() []StateChange {
 	return a.stateChanges
 }
 
-func (a *Aggregate[T, R]) ChangeState(cmd any) error {
+func (a *Aggregate[T, R]) ChangeState(cmd Command) error {
 	stateChanges, err := a.root.ProcessCommand(cmd)
 	if err != nil {
 		return err

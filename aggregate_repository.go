@@ -38,7 +38,7 @@ func (r *AggregateRepository[T, R]) Get(
 }
 
 func (r *AggregateRepository[T, R]) Create(
-	ctx context.Context, id string, cmd any,
+	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
 	agg, err := r.load(ctx, id)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r *AggregateRepository[T, R]) Create(
 }
 
 func (r *AggregateRepository[T, R]) GetOrCreate(
-	ctx context.Context, id string, cmd any,
+	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
 	agg, err := r.load(ctx, id)
 	if err != nil {
@@ -94,7 +94,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 }
 
 func (r *AggregateRepository[T, R]) Update(
-	ctx context.Context, id string, cmd any,
+	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
 	agg, err := r.load(ctx, id)
 	if err != nil {
