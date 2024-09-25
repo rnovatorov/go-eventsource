@@ -40,6 +40,14 @@ func (r *AggregateRepository[T, R]) Get(
 func (r *AggregateRepository[T, R]) Create(
 	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
+	if id == "" {
+		randomID, err := uuid.NewRandom()
+		if err != nil {
+			return nil, fmt.Errorf("generate ID: %w", err)
+		}
+		id = randomID.String()
+	}
+
 	agg, err := r.load(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
@@ -66,6 +74,14 @@ func (r *AggregateRepository[T, R]) Create(
 func (r *AggregateRepository[T, R]) GetOrCreate(
 	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
+	if id == "" {
+		randomID, err := uuid.NewRandom()
+		if err != nil {
+			return nil, fmt.Errorf("generate ID: %w", err)
+		}
+		id = randomID.String()
+	}
+
 	agg, err := r.load(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
