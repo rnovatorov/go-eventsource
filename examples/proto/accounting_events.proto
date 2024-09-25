@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package rnovatorov.eventsource.examples.accounting_events;
+
+import "google/protobuf/timestamp.proto";
+
+message BookCreated {
+    string description = 1;
+}
+
+message BookClosed {
+}
+
+enum AccountType {
+    UNKNOWN = 0;
+    CAPITAL = 1;
+    ASSET = 2;
+    LIABILITY = 3;
+    INCOME = 4;
+    EXPENSE = 5;
+}
+
+message BookAccountAdded {
+    string name = 1;
+    AccountType type = 2;
+}
+
+message BookTransactionEntered {
+    google.protobuf.Timestamp timestamp = 1;
+    string account_debited = 2;
+    string account_credited = 3;
+    uint64 amount = 4;
+}

@@ -120,10 +120,10 @@ func (h *Handler) handleBookAccountAdd(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	accountType := model.AccountType(model.AccountType_value[payload.AccountType])
 
 	if err := h.accountingService.AddBookAccount(
-		r.Context(), payload.BookID, payload.AccountName,
-		model.NewAccountType(payload.AccountType),
+		r.Context(), payload.BookID, payload.AccountName, accountType,
 	); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

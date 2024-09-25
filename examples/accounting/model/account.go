@@ -36,17 +36,17 @@ func (a *Account) mustCredit(amount uint64) {
 
 func (a *Account) canDebit(amount uint64) (newBalance uint64, err error) {
 	switch a.type_ {
-	case AccountTypeCapital:
+	case AccountType_CAPITAL:
 		return a.canDecreaseBalance(amount)
-	case AccountTypeAsset:
+	case AccountType_ASSET:
 		return a.canIncreaseBalance(amount)
-	case AccountTypeLiability:
+	case AccountType_LIABILITY:
 		return a.canDecreaseBalance(amount)
-	case AccountTypeIncome:
+	case AccountType_INCOME:
 		return a.canDecreaseBalance(amount)
-	case AccountTypeExpence:
+	case AccountType_EXPENSE:
 		return a.canIncreaseBalance(amount)
-	case AccountTypeUnknown:
+	case AccountType_UNKNOWN:
 		fallthrough
 	default:
 		return 0, ErrAccountTypeUnknown
@@ -55,17 +55,17 @@ func (a *Account) canDebit(amount uint64) (newBalance uint64, err error) {
 
 func (a *Account) canCredit(amount uint64) (newBalance uint64, err error) {
 	switch a.type_ {
-	case AccountTypeCapital:
+	case AccountType_CAPITAL:
 		return a.canIncreaseBalance(amount)
-	case AccountTypeAsset:
+	case AccountType_ASSET:
 		return a.canDecreaseBalance(amount)
-	case AccountTypeLiability:
+	case AccountType_LIABILITY:
 		return a.canIncreaseBalance(amount)
-	case AccountTypeIncome:
+	case AccountType_INCOME:
 		return a.canIncreaseBalance(amount)
-	case AccountTypeExpence:
+	case AccountType_EXPENSE:
 		return a.canDecreaseBalance(amount)
-	case AccountTypeUnknown:
+	case AccountType_UNKNOWN:
 		fallthrough
 	default:
 		return 0, ErrAccountTypeUnknown
