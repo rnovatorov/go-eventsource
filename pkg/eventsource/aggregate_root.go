@@ -2,6 +2,6 @@ package eventsource
 
 type aggregateRoot[T any] interface {
 	*T
-	ProcessCommand(Command) ([]StateChange, error)
+	ProcessCommand(Command) (StateChanges, error)
 	ApplyStateChange(StateChange)
 }
