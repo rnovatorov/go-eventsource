@@ -9,8 +9,6 @@ import (
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
 
-type BookAggregate = *eventsource.Aggregate[Book, *Book]
-
 type Book struct {
 	created     bool
 	closed      bool
