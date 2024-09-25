@@ -13,3 +13,5 @@ type Event struct {
 	Metadata         Metadata
 	Data             *anypb.Any
 }
+
+type Events []*Event

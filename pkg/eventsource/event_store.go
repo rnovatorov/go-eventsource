@@ -7,9 +7,9 @@ import (
 type EventStore interface {
 	ListEvents(
 		ctx context.Context, aggregateID string,
-	) ([]*Event, error)
+	) (Events, error)
 	SaveEvents(
 		ctx context.Context, aggregateID string, expectedAggregateVersion int,
-		events []*Event,
+		events Events,
 	) error
 }
