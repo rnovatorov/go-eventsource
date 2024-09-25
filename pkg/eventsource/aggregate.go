@@ -4,7 +4,7 @@ type Aggregate[T any, R aggregateRoot[T]] struct {
 	id           string
 	version      int
 	root         R
-	stateChanges []StateChange
+	stateChanges StateChanges
 }
 
 func (a *Aggregate[T, R]) ID() string {
