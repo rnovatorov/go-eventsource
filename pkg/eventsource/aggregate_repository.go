@@ -49,7 +49,7 @@ func (r *AggregateRepository[T, R]) Create(
 		return nil, ErrAggregateAlreadyExists
 	}
 
-	if err := agg.ChangeState(cmd); err != nil {
+	if err := agg.changeState(cmd); err != nil {
 		return nil, fmt.Errorf("change state: %w", err)
 	}
 
@@ -75,7 +75,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 		return agg, nil
 	}
 
-	if err := agg.ChangeState(cmd); err != nil {
+	if err := agg.changeState(cmd); err != nil {
 		return nil, fmt.Errorf("change state: %w", err)
 	}
 
@@ -105,7 +105,7 @@ func (r *AggregateRepository[T, R]) Update(
 		return nil, ErrAggregateDoesNotExist
 	}
 
-	if err := agg.ChangeState(cmd); err != nil {
+	if err := agg.changeState(cmd); err != nil {
 		return nil, fmt.Errorf("change state: %w", err)
 	}
 
@@ -147,15 +147,15 @@ func (r *AggregateRepository[T, R]) load(
 func (r *AggregateRepository[T, R]) Save(
 	ctx context.Context, agg *Aggregate[T, R],
 ) error {
-	if len(agg.StateChanges()) == 0 {
+	if len(agg.stateChanges) == 0 {
 		return nil
 	}
 
-	originalVersion := agg.Version() - len(agg.StateChanges())
+	originalVersion := agg.Version() - len(agg.stateChanges)
 	metadata := MetadataFromContext(ctx)
-	events := make([]*Event, 0, len(agg.StateChanges()))
+	events := make(Events, 0, len(agg.stateChanges))
 
-	for i, stateChange := range agg.StateChanges() {
+	for i, stateChange := range agg.stateChanges {
 		id, err := uuid.NewRandom()
 		if err != nil {
 			return fmt.Errorf("generate event ID: %w", err)
