@@ -190,7 +190,7 @@ func (r *AggregateRepository[T, R]) Save(
 	}
 
 	if err := r.eventStore.SaveEvents(
-		ctx, agg.ID(), agg.Version(), events,
+		ctx, agg.ID(), originalVersion, events,
 	); err != nil {
 		return fmt.Errorf("save events: %w", err)
 	}
