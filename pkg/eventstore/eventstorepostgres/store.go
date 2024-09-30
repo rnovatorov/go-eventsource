@@ -17,50 +17,21 @@ import (
 var _ eventsource.EventStore = (*Store)(nil)
 
 type Store struct {
-	pool            *pgxpool.Pool
-	aggregatesTable string
-	eventsTable     string
+	pool              *pgxpool.Pool
+	aggregatesTable   string
+	eventsTable       string
+	projectionUpdater ProjectionUpdater
 }
 
 func New(pool *pgxpool.Pool, opts ...option) *Store {
 	cfg := newConfig(opts...)
 
 	return &Store{
-		pool:            pool,
-		aggregatesTable: append(cfg.schema, "aggregates").Sanitize(),
-		eventsTable:     append(cfg.schema, "events").Sanitize(),
+		pool:              pool,
+		aggregatesTable:   pgx.Identifier{cfg.schema, "aggregates"}.Sanitize(),
+		eventsTable:       pgx.Identifier{cfg.schema, "events"}.Sanitize(),
+		projectionUpdater: cfg.projectionUpdater,
 	}
-}
-
-func (s *Store) MigrateDatabase(ctx context.Context) error {
-	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
-			CREATE TABLE IF NOT EXISTS `+s.aggregatesTable+` (
-				id TEXT NOT NULL,
-				version INT NOT NULL CHECK (version >= 0),
-				PRIMARY KEY (id)
-			)
-		`); err != nil {
-			return fmt.Errorf("create aggregates table: %w", err)
-		}
-
-		if _, err := tx.Exec(ctx, `
-			CREATE TABLE IF NOT EXISTS `+s.eventsTable+` (
-				id TEXT NOT NULL,
-				aggregate_id TEXT NOT NULL REFERENCES `+s.aggregatesTable+` (id),
-				aggregate_version INT NOT NULL,
-				timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-				metadata JSONB NOT NULL,
-				data JSONB NOT NULL,
-				PRIMARY KEY (id),
-				UNIQUE (aggregate_id, aggregate_version)
-			)
-		`); err != nil {
-			return fmt.Errorf("create events table: %w", err)
-		}
-
-		return nil
-	})
 }
 
 func (s *Store) ListEvents(
@@ -167,6 +138,12 @@ func (s *Store) saveEvent(
 	`, event.ID, event.AggregateID, event.AggregateVersion,
 		event.Timestamp, string(metadataBytes), string(dataBytes)); err != nil {
 		return fmt.Errorf("insert: %w", err)
+	}
+
+	if u := s.projectionUpdater; u != nil {
+		if err := u(ctx, tx, event); err != nil {
+			return fmt.Errorf("update projections: %w", err)
+		}
 	}
 
 	return nil

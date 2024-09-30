@@ -1,25 +1,34 @@
 package eventstorepostgres
 
-import "github.com/jackc/pgx/v5"
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
+)
 
 type config struct {
-	schema pgx.Identifier
+	schema            string
+	projectionUpdater ProjectionUpdater
 }
 
 func newConfig(opts ...option) config {
-	c := config{
-		schema: pgx.Identifier{},
+	cfg := config{
+		schema: "eventsource",
 	}
 	for _, opt := range opts {
-		opt(&c)
+		opt(&cfg)
 	}
-	return c
+	return cfg
 }
 
 type option func(*config)
 
-func WithSchema(schema string) option {
-	return func(p *config) {
-		p.schema = pgx.Identifier{schema}
+type ProjectionUpdater func(context.Context, pgx.Tx, *eventsource.Event) error
+
+func WithProjectionUpdater(u ProjectionUpdater) option {
+	return func(cfg *config) {
+		cfg.projectionUpdater = u
 	}
 }
