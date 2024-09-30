@@ -18,22 +18,6 @@ func (a *Account) Balance() uint64 {
 	return a.balance
 }
 
-func (a *Account) mustDebit(amount uint64) {
-	newBalance, err := a.canDebit(amount)
-	if err != nil {
-		panic(err)
-	}
-	a.balance = newBalance
-}
-
-func (a *Account) mustCredit(amount uint64) {
-	newBalance, err := a.canCredit(amount)
-	if err != nil {
-		panic(err)
-	}
-	a.balance = newBalance
-}
-
 func (a *Account) canDebit(amount uint64) (newBalance uint64, err error) {
 	switch a.type_ {
 	case AccountType_CAPITAL:

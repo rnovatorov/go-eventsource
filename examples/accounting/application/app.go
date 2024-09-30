@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/rnovatorov/go-eventsource/examples/accounting/model"
@@ -10,16 +9,19 @@ import (
 )
 
 type App struct {
-	bookRepository *eventsource.AggregateRepository[model.Book, *model.Book]
+	bookRepository    *eventsource.AggregateRepository[model.Book, *model.Book]
+	projectionQueries ProjectionQueries
 }
 
 type Params struct {
-	EventStore eventsource.EventStore
+	EventStore        eventsource.EventStore
+	ProjectionQueries ProjectionQueries
 }
 
 func New(p Params) *App {
 	return &App{
-		bookRepository: eventsource.NewAggregateRepository[model.Book](p.EventStore),
+		bookRepository:    eventsource.NewAggregateRepository[model.Book](p.EventStore),
+		projectionQueries: p.ProjectionQueries,
 	}
 }
 
@@ -51,8 +53,8 @@ func (a *App) AddBookAccount(
 ) error {
 	_, err := a.bookRepository.Update(ctx, bookID,
 		model.BookAccountAdd{
-			Name: accountName,
-			Type: accountType,
+			AccountName: accountName,
+			AccountType: accountType,
 		},
 	)
 	return err
@@ -61,17 +63,7 @@ func (a *App) AddBookAccount(
 func (a *App) GetBookAccountBalance(
 	ctx context.Context, bookID string, accountName string,
 ) (uint64, error) {
-	book, err := a.bookRepository.Get(ctx, bookID)
-	if err != nil {
-		return 0, fmt.Errorf("get book: %w", err)
-	}
-
-	account, err := book.Root().AccountByName(accountName)
-	if err != nil {
-		return 0, fmt.Errorf("get account by name: %w", err)
-	}
-
-	return account.Balance(), nil
+	return a.projectionQueries.GetAccountBalance(ctx, bookID, accountName)
 }
 
 func (a *App) EnterBookTransaction(
@@ -79,12 +71,12 @@ func (a *App) EnterBookTransaction(
 	accountDebited string, accountCredited string, amount uint64,
 ) error {
 	_, err := a.bookRepository.Update(ctx, bookID,
-		model.BookTransactionEnter{
+		model.BookTransactionEnter{Transaction: model.Transaction{
 			Timestamp:       timestamp,
 			AccountDebited:  accountDebited,
 			AccountCredited: accountCredited,
 			Amount:          amount,
-		},
+		}},
 	)
 	return err
 }

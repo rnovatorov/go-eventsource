@@ -30,4 +30,6 @@ message BookTransactionEntered {
     string account_debited = 2;
     string account_credited = 3;
     uint64 amount = 4;
+    uint64 account_debited_new_balance = 5;
+    uint64 account_credited_new_balance = 6;
 }

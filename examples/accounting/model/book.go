@@ -11,10 +11,11 @@ import (
 )
 
 type Book struct {
-	created     bool
-	closed      bool
-	description string
-	accounts    map[string]*Account
+	created      bool
+	closed       bool
+	description  string
+	transactions []Transaction
+	accounts     map[string]*Account
 }
 
 func (b *Book) Closed() bool {
@@ -81,22 +82,22 @@ func (b *Book) processAccountAdd(cmd BookAccountAdd) (eventsource.StateChanges, 
 		return nil, ErrBookClosed
 	}
 
-	if _, ok := b.accounts[cmd.Name]; ok {
+	if _, ok := b.accounts[cmd.AccountName]; ok {
 		return nil, ErrAccountNameConflict
 	}
 
-	if cmd.Name == "" {
+	if cmd.AccountName == "" {
 		return nil, ErrAccountNameEmpty
 	}
 
-	if cmd.Type == AccountType_UNKNOWN {
+	if cmd.AccountType == AccountType_UNKNOWN {
 		return nil, ErrAccountTypeUnknown
 	}
 
 	return eventsource.StateChanges{
 		&BookAccountAdded{
-			Name: cmd.Name,
-			Type: cmd.Type,
+			Name: cmd.AccountName,
+			Type: cmd.AccountType,
 		},
 	}, nil
 }
@@ -108,30 +109,34 @@ func (b *Book) processTransactionEnter(
 		return nil, ErrBookClosed
 	}
 
-	accountDebited, ok := b.accounts[cmd.AccountDebited]
+	accountDebited, ok := b.accounts[cmd.Transaction.AccountDebited]
 	if !ok {
 		return nil, ErrAccountDebitedNotFound
 	}
 
-	accountCredited, ok := b.accounts[cmd.AccountCredited]
+	accountCredited, ok := b.accounts[cmd.Transaction.AccountCredited]
 	if !ok {
 		return nil, ErrAccountCreditedNotFound
 	}
 
-	if _, err := accountDebited.canDebit(cmd.Amount); err != nil {
+	accountDebitedNewBalance, err := accountDebited.canDebit(cmd.Transaction.Amount)
+	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAccountDebitDeclined, err)
 	}
 
-	if _, err := accountCredited.canCredit(cmd.Amount); err != nil {
+	accountCreditedNewBalance, err := accountCredited.canCredit(cmd.Transaction.Amount)
+	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrAccountCreditDeclined, err)
 	}
 
 	return eventsource.StateChanges{
 		&BookTransactionEntered{
-			Timestamp:       timestamppb.New(cmd.Timestamp),
-			AccountDebited:  cmd.AccountDebited,
-			AccountCredited: cmd.AccountCredited,
-			Amount:          cmd.Amount,
+			Timestamp:                 timestamppb.New(cmd.Transaction.Timestamp),
+			AccountDebited:            cmd.Transaction.AccountDebited,
+			AccountCredited:           cmd.Transaction.AccountCredited,
+			Amount:                    cmd.Transaction.Amount,
+			AccountDebitedNewBalance:  accountDebitedNewBalance,
+			AccountCreditedNewBalance: accountCreditedNewBalance,
 		},
 	}, nil
 }
@@ -170,6 +175,13 @@ func (b *Book) applyAccountAdded(sc *BookAccountAdded) {
 }
 
 func (b *Book) applyTransactionEntered(sc *BookTransactionEntered) {
-	b.accounts[sc.AccountDebited].mustDebit(sc.Amount)
-	b.accounts[sc.AccountCredited].mustCredit(sc.Amount)
+	b.accounts[sc.AccountDebited].balance = sc.AccountDebitedNewBalance
+	b.accounts[sc.AccountCredited].balance = sc.AccountCreditedNewBalance
+
+	b.transactions = append(b.transactions, Transaction{
+		Timestamp:       sc.Timestamp.AsTime(),
+		AccountDebited:  sc.AccountDebited,
+		AccountCredited: sc.AccountCredited,
+		Amount:          sc.Amount,
+	})
 }
