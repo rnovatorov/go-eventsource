@@ -8,6 +8,7 @@ import (
 
 type Event struct {
 	ID               string
+	AggregateID      string
 	AggregateVersion int
 	Timestamp        time.Time
 	Metadata         Metadata

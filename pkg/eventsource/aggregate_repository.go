@@ -182,6 +182,7 @@ func (r *AggregateRepository[T, R]) Save(
 		}
 		events = append(events, &Event{
 			ID:               id.String(),
+			AggregateID:      agg.ID(),
 			AggregateVersion: originalVersion + i + 1,
 			Timestamp:        time.Now(),
 			Metadata:         metadata,
