@@ -14,3 +14,7 @@ func MetadataFromContext(ctx context.Context) Metadata {
 	md, _ := ctx.Value(metadataContextKey{}).(Metadata)
 	return md
 }
+
+const (
+	CausationID = "X-Causation-ID"
+)

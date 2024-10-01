@@ -8,4 +8,5 @@ var (
 	ErrAggregateDoesNotExist  = errors.New("aggregate does not exist")
 	ErrEmptyID                = errors.New("empty ID")
 	ErrUnknownCommand         = errors.New("unknown command")
+	ErrDuplicateCommand       = errors.New("duplicate command")
 )

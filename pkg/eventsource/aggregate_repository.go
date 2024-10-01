@@ -57,7 +57,7 @@ func (r *AggregateRepository[T, R]) Create(
 		return nil, ErrAggregateAlreadyExists
 	}
 
-	if err := agg.changeState(cmd); err != nil {
+	if err := agg.ChangeState(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("change state: %w", err)
 	}
 
@@ -91,7 +91,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 		return agg, nil
 	}
 
-	if err := agg.changeState(cmd); err != nil {
+	if err := agg.ChangeState(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("change state: %w", err)
 	}
 
@@ -121,7 +121,7 @@ func (r *AggregateRepository[T, R]) Update(
 		return nil, ErrAggregateDoesNotExist
 	}
 
-	if err := agg.changeState(cmd); err != nil {
+	if err := agg.ChangeState(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("change state: %w", err)
 	}
 
@@ -135,21 +135,27 @@ func (r *AggregateRepository[T, R]) Update(
 func (r *AggregateRepository[T, R]) load(
 	ctx context.Context, id string,
 ) (*Aggregate[T, R], error) {
-	var root R = new(T)
-	var version int
-
 	events, err := r.eventStore.ListEvents(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("list events: %w", err)
 	}
+
+	var root R = new(T)
+	var version int
+	causationIDs := make(map[string]struct{}, len(events))
 
 	for _, event := range events {
 		stateChange, err := event.Data.UnmarshalNew()
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal state change: %w", err)
 		}
+
 		root.ApplyStateChange(stateChange)
 		version = event.AggregateVersion
+
+		if id, ok := event.Metadata[CausationID].(string); ok {
+			causationIDs[id] = struct{}{}
+		}
 	}
 
 	return &Aggregate[T, R]{
@@ -157,6 +163,7 @@ func (r *AggregateRepository[T, R]) load(
 		version:      version,
 		root:         root,
 		stateChanges: nil,
+		causationIDs: causationIDs,
 	}, nil
 }
 
