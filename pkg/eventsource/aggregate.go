@@ -24,10 +24,10 @@ func (a *Aggregate[T, R]) Root() R {
 
 func (a *Aggregate[T, R]) ChangeState(ctx context.Context, cmd Command) error {
 	metadata := MetadataFromContext(ctx)
-	if id, ok := metadata[CausationID].(string); ok {
-		if _, ok := a.causationIDs[id]; ok {
-			return ErrDuplicateCommand
-		}
+
+	causationID, _ := metadata[CausationID].(string)
+	if _, ok := a.causationIDs[causationID]; ok {
+		return ErrDuplicateCommand
 	}
 
 	stateChanges, err := a.root.ProcessCommand(cmd)
@@ -40,6 +40,8 @@ func (a *Aggregate[T, R]) ChangeState(ctx context.Context, cmd Command) error {
 		a.stateChanges = append(a.stateChanges, stateChange)
 		a.version++
 	}
+
+	a.causationIDs[causationID] = struct{}{}
 
 	return nil
 }
