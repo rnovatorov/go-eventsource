@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rnovatorov/go-eventsource/examples/accounting/model"
+	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
 
 type accountingService interface {
@@ -53,6 +54,12 @@ func NewHandler(s accountingService) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if idempotencyKey := r.Header.Get("X-Idempotency-Key"); idempotencyKey != "" {
+		ctx := eventsource.WithMetadata(r.Context(), eventsource.Metadata{
+			eventsource.CausationID: idempotencyKey,
+		})
+		r = r.WithContext(ctx)
+	}
 	h.mux.ServeHTTP(w, r)
 }
 
