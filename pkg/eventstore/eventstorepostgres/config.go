@@ -9,13 +9,17 @@ import (
 )
 
 type config struct {
-	schema            string
-	projectionUpdater ProjectionUpdater
+	schema        string
+	saveEventHook SaveEventHook
 }
 
 func newConfig(opts ...option) config {
 	cfg := config{
 		schema: "eventsource",
+		saveEventHook: func(context.Context, pgx.Tx, *eventsource.Event) error {
+			// noop
+			return nil
+		},
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -25,10 +29,10 @@ func newConfig(opts ...option) config {
 
 type option func(*config)
 
-type ProjectionUpdater func(context.Context, pgx.Tx, *eventsource.Event) error
+type SaveEventHook func(context.Context, pgx.Tx, *eventsource.Event) error
 
-func WithProjectionUpdater(u ProjectionUpdater) option {
+func WithSaveEventHook(hook SaveEventHook) option {
 	return func(cfg *config) {
-		cfg.projectionUpdater = u
+		cfg.saveEventHook = hook
 	}
 }

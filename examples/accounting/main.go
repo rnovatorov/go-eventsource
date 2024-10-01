@@ -35,7 +35,7 @@ func run(ctx context.Context) error {
 	defer pool.Close()
 
 	eventStore := eventstorepostgres.New(pool,
-		eventstorepostgres.WithProjectionUpdater(postgresadapter.UpdateProjections))
+		eventstorepostgres.WithSaveEventHook(postgresadapter.UpdateProjections))
 
 	app := application.New(application.Params{
 		EventStore:        eventStore,

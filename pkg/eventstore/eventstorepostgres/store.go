@@ -17,20 +17,20 @@ import (
 var _ eventsource.EventStore = (*Store)(nil)
 
 type Store struct {
-	pool              *pgxpool.Pool
-	aggregatesTable   string
-	eventsTable       string
-	projectionUpdater ProjectionUpdater
+	pool            *pgxpool.Pool
+	aggregatesTable string
+	eventsTable     string
+	saveEventHook   SaveEventHook
 }
 
 func New(pool *pgxpool.Pool, opts ...option) *Store {
 	cfg := newConfig(opts...)
 
 	return &Store{
-		pool:              pool,
-		aggregatesTable:   pgx.Identifier{cfg.schema, "aggregates"}.Sanitize(),
-		eventsTable:       pgx.Identifier{cfg.schema, "events"}.Sanitize(),
-		projectionUpdater: cfg.projectionUpdater,
+		pool:            pool,
+		aggregatesTable: pgx.Identifier{cfg.schema, "aggregates"}.Sanitize(),
+		eventsTable:     pgx.Identifier{cfg.schema, "events"}.Sanitize(),
+		saveEventHook:   cfg.saveEventHook,
 	}
 }
 
@@ -140,10 +140,8 @@ func (s *Store) saveEvent(
 		return fmt.Errorf("insert: %w", err)
 	}
 
-	if u := s.projectionUpdater; u != nil {
-		if err := u(ctx, tx, event); err != nil {
-			return fmt.Errorf("update projections: %w", err)
-		}
+	if err := s.saveEventHook(ctx, tx, event); err != nil {
+		return fmt.Errorf("save event hook: %w", err)
 	}
 
 	return nil
