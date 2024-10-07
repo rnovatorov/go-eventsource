@@ -25,7 +25,7 @@ type AggregateRepository[T any, R aggregateRoot[T]] struct {
 func (r *AggregateRepository[T, R]) Get(
 	ctx context.Context, id string,
 ) (*Aggregate[T, R], error) {
-	agg, err := r.load(ctx, id)
+	agg, err := r.Load(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (r *AggregateRepository[T, R]) Create(
 		id = randomID.String()
 	}
 
-	agg, err := r.load(ctx, id)
+	agg, err := r.Load(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
@@ -82,7 +82,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 		id = randomID.String()
 	}
 
-	agg, err := r.load(ctx, id)
+	agg, err := r.Load(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
@@ -97,7 +97,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 
 	if err := r.Save(ctx, agg); err != nil {
 		if errors.Is(err, ErrConcurrentUpdate) {
-			agg, err = r.load(ctx, id)
+			agg, err = r.Load(ctx, id)
 			if err != nil {
 				return nil, fmt.Errorf("load: %w", err)
 			}
@@ -112,7 +112,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 func (r *AggregateRepository[T, R]) Update(
 	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
-	agg, err := r.load(ctx, id)
+	agg, err := r.Load(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
@@ -132,7 +132,7 @@ func (r *AggregateRepository[T, R]) Update(
 	return agg, nil
 }
 
-func (r *AggregateRepository[T, R]) load(
+func (r *AggregateRepository[T, R]) Load(
 	ctx context.Context, id string,
 ) (*Aggregate[T, R], error) {
 	events, err := r.eventStore.ListEvents(ctx, id)
