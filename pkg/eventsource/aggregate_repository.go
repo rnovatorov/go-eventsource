@@ -57,8 +57,8 @@ func (r *AggregateRepository[T, R]) Create(
 		return nil, ErrAggregateAlreadyExists
 	}
 
-	if err := agg.ChangeState(ctx, cmd); err != nil {
-		return nil, fmt.Errorf("change state: %w", err)
+	if err := agg.ProcessCommand(ctx, cmd); err != nil {
+		return nil, fmt.Errorf("process command: %w", err)
 	}
 
 	if err := r.Save(ctx, agg); err != nil {
@@ -91,8 +91,8 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 		return agg, nil
 	}
 
-	if err := agg.ChangeState(ctx, cmd); err != nil {
-		return nil, fmt.Errorf("change state: %w", err)
+	if err := agg.ProcessCommand(ctx, cmd); err != nil {
+		return nil, fmt.Errorf("process command: %w", err)
 	}
 
 	if err := r.Save(ctx, agg); err != nil {
@@ -121,8 +121,8 @@ func (r *AggregateRepository[T, R]) Update(
 		return nil, ErrAggregateDoesNotExist
 	}
 
-	if err := agg.ChangeState(ctx, cmd); err != nil {
-		return nil, fmt.Errorf("change state: %w", err)
+	if err := agg.ProcessCommand(ctx, cmd); err != nil {
+		return nil, fmt.Errorf("process command: %w", err)
 	}
 
 	if err := r.Save(ctx, agg); err != nil {

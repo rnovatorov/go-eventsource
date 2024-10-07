@@ -22,12 +22,12 @@ func (a *Aggregate[T, R]) Root() R {
 	return a.root
 }
 
-func (a *Aggregate[T, R]) ChangeState(ctx context.Context, cmd Command) error {
+func (a *Aggregate[T, R]) ProcessCommand(ctx context.Context, cmd Command) error {
 	metadata := MetadataFromContext(ctx)
 
 	causationID, _ := metadata[CausationID].(string)
 	if _, ok := a.causationIDs[causationID]; ok {
-		return ErrDuplicateCommand
+		return ErrCommandAlreadyProcessed
 	}
 
 	stateChanges, err := a.root.ProcessCommand(cmd)

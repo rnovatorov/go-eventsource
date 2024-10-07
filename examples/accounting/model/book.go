@@ -47,7 +47,7 @@ func (b *Book) ProcessCommand(
 	case BookTransactionEnter:
 		return b.processTransactionEnter(cmd)
 	default:
-		return nil, fmt.Errorf("%w: %T", eventsource.ErrUnknownCommand, cmd)
+		return nil, fmt.Errorf("%w: %T", eventsource.ErrCommandUnknown, cmd)
 	}
 }
 
