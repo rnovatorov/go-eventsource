@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package rnovatorov.eventsource.saga_events;
+
+import "google/protobuf/struct.proto";
+
+message TaskDefinition {
+    string id = 1;
+    google.protobuf.Struct arguments = 2;
+    repeated string dependencies = 3;
+}
+
+message SagaBegun {
+    repeated TaskDefinition task_definitions = 1;
+}
+
+message SagaEnded {
+}
+
+message TaskBegun {
+    string id = 1;
+}
+
+message TaskEnded {
+    string id = 1;
+    google.protobuf.Struct result = 2;
+}
+
+message TaskAborted {
+    string id = 1;
+    google.protobuf.Struct reason = 2;
+}
+
+message CompensationBegun {
+    string id = 1;
+}
+
+message CompensationEnded {
+    string id = 1;
+}
