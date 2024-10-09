@@ -1,6 +1,9 @@
 package eventsource
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type Aggregate[T any, R aggregateRoot[T]] struct {
 	id           string
@@ -8,6 +11,45 @@ type Aggregate[T any, R aggregateRoot[T]] struct {
 	root         R
 	stateChanges StateChanges
 	causationIDs map[string]struct{}
+}
+
+func NewAggregate[T any, R aggregateRoot[T]](id string) *Aggregate[T, R] {
+	agg, err := RehydrateAggregate[T, R](id, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return agg
+}
+
+func RehydrateAggregate[T any, R aggregateRoot[T]](
+	id string, events []*Event,
+) (*Aggregate[T, R], error) {
+	var root R = new(T)
+	var version int
+	causationIDs := make(map[string]struct{}, len(events))
+
+	for _, event := range events {
+		stateChange, err := event.Data.UnmarshalNew()
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal state change: %w", err)
+		}
+
+		root.ApplyStateChange(stateChange)
+		version = event.AggregateVersion
+
+		if cid := event.Metadata.CausationID(); cid != "" {
+			causationIDs[cid] = struct{}{}
+		}
+	}
+
+	return &Aggregate[T, R]{
+		id:           id,
+		version:      version,
+		root:         root,
+		stateChanges: nil,
+		causationIDs: causationIDs,
+	}, nil
 }
 
 func (a *Aggregate[T, R]) ID() string {
@@ -25,8 +67,7 @@ func (a *Aggregate[T, R]) Root() R {
 func (a *Aggregate[T, R]) ProcessCommand(ctx context.Context, cmd Command) error {
 	metadata := MetadataFromContext(ctx)
 
-	causationID, _ := metadata[CausationID].(string)
-	if _, ok := a.causationIDs[causationID]; ok {
+	if _, ok := a.causationIDs[metadata.CausationID()]; ok {
 		return ErrCommandAlreadyProcessed
 	}
 
@@ -41,7 +82,9 @@ func (a *Aggregate[T, R]) ProcessCommand(ctx context.Context, cmd Command) error
 		a.version++
 	}
 
-	a.causationIDs[causationID] = struct{}{}
+	if cid := metadata.CausationID(); cid != "" {
+		a.causationIDs[cid] = struct{}{}
+	}
 
 	return nil
 }

@@ -140,31 +140,12 @@ func (r *AggregateRepository[T, R]) Load(
 		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	var root R = new(T)
-	var version int
-	causationIDs := make(map[string]struct{}, len(events))
-
-	for _, event := range events {
-		stateChange, err := event.Data.UnmarshalNew()
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal state change: %w", err)
-		}
-
-		root.ApplyStateChange(stateChange)
-		version = event.AggregateVersion
-
-		if id, ok := event.Metadata[CausationID].(string); ok {
-			causationIDs[id] = struct{}{}
-		}
+	agg, err := RehydrateAggregate[T, R](id, events)
+	if err != nil {
+		return nil, fmt.Errorf("rehydrate: %w", err)
 	}
 
-	return &Aggregate[T, R]{
-		id:           id,
-		version:      version,
-		root:         root,
-		stateChanges: nil,
-		causationIDs: causationIDs,
-	}, nil
+	return agg, nil
 }
 
 func (r *AggregateRepository[T, R]) Save(
