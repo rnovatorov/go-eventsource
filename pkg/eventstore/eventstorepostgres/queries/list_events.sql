@@ -1,5 +1,6 @@
 SELECT
     id,
+    aggregate_id,
     aggregate_version,
     timestamp,
     metadata,

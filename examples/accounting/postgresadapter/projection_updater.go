@@ -10,7 +10,9 @@ import (
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
 
-func UpdateProjections(
+type ProjectionUpdater struct{}
+
+func (u ProjectionUpdater) HandleEvent(
 	ctx context.Context, tx pgx.Tx, event *eventsource.Event,
 ) error {
 	data, err := event.Data.UnmarshalNew()
@@ -20,19 +22,19 @@ func UpdateProjections(
 
 	switch d := data.(type) {
 	case *model.BookCreated:
-		return handleBookCreated(ctx, tx, event, d)
+		return u.handleBookCreated(ctx, tx, event, d)
 	case *model.BookClosed:
-		return handleBookClosed(ctx, tx, event, d)
+		return u.handleBookClosed(ctx, tx, event, d)
 	case *model.BookAccountAdded:
-		return handleBookAccountAdded(ctx, tx, event, d)
+		return u.handleBookAccountAdded(ctx, tx, event, d)
 	case *model.BookTransactionEntered:
-		return handleBookTransactionEntered(ctx, tx, event, d)
+		return u.handleBookTransactionEntered(ctx, tx, event, d)
 	}
 
 	return nil
 }
 
-func handleBookCreated(
+func (ProjectionUpdater) handleBookCreated(
 	ctx context.Context, tx pgx.Tx, e *eventsource.Event, d *model.BookCreated,
 ) error {
 	_, err := tx.Exec(ctx, `
@@ -42,7 +44,7 @@ func handleBookCreated(
 	return err
 }
 
-func handleBookClosed(
+func (ProjectionUpdater) handleBookClosed(
 	ctx context.Context, tx pgx.Tx, e *eventsource.Event, _ *model.BookClosed,
 ) error {
 	_, err := tx.Exec(ctx, `
@@ -53,7 +55,7 @@ func handleBookClosed(
 	return err
 }
 
-func handleBookAccountAdded(
+func (ProjectionUpdater) handleBookAccountAdded(
 	ctx context.Context, tx pgx.Tx, e *eventsource.Event, d *model.BookAccountAdded,
 ) error {
 	_, err := tx.Exec(ctx, `
@@ -63,7 +65,7 @@ func handleBookAccountAdded(
 	return err
 }
 
-func handleBookTransactionEntered(
+func (ProjectionUpdater) handleBookTransactionEntered(
 	ctx context.Context, tx pgx.Tx, e *eventsource.Event, d *model.BookTransactionEntered,
 ) error {
 	if _, err := tx.Exec(ctx, `
