@@ -17,31 +17,25 @@ import (
 var _ eventsource.EventStore = (*Store)(nil)
 
 type Store struct {
-	pool            *pgxpool.Pool
-	aggregatesTable string
-	eventsTable     string
-	saveEventHook   SaveEventHook
+	pool          *pgxpool.Pool
+	saveEventHook SaveEventHook
 }
 
 func New(pool *pgxpool.Pool, opts ...option) *Store {
 	cfg := newConfig(opts...)
 
 	return &Store{
-		pool:            pool,
-		aggregatesTable: pgx.Identifier{cfg.schema, "aggregates"}.Sanitize(),
-		eventsTable:     pgx.Identifier{cfg.schema, "events"}.Sanitize(),
-		saveEventHook:   cfg.saveEventHook,
+		pool:          pool,
+		saveEventHook: cfg.saveEventHook,
 	}
 }
 
 func (s *Store) ListEvents(
 	ctx context.Context, aggregateID string,
 ) (eventsource.Events, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, aggregate_version, timestamp, metadata, data
-		FROM `+s.eventsTable+`
-		WHERE aggregate_id = $1
-	`, aggregateID)
+	rows, err := s.pool.Query(ctx, listEventsQuery, pgx.NamedArgs{
+		"aggregate_id": aggregateID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
@@ -88,21 +82,20 @@ func (s *Store) SaveEvents(
 ) error {
 	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		if expectedAggregateVersion == 0 {
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO `+s.aggregatesTable+` (id, version)
-				VALUES ($1, 0)
-				ON CONFLICT DO NOTHING
-			`, aggregateID); err != nil {
-				return fmt.Errorf("insert aggregate: %w", err)
+			if _, err := tx.Exec(ctx, createAggregateQuery, pgx.NamedArgs{
+				"aggregate_id": aggregateID,
+			}); err != nil {
+				return fmt.Errorf("create aggregate: %w", err)
 			}
 		}
 
 		newVersion := expectedAggregateVersion + len(events)
-		if ct, err := tx.Exec(ctx, `
-			UPDATE `+s.aggregatesTable+`
-			SET version = $3
-			WHERE id = $1 AND version = $2
-		`, aggregateID, expectedAggregateVersion, newVersion); err != nil {
+
+		if ct, err := tx.Exec(ctx, updateAggregateVersionQuery, pgx.NamedArgs{
+			"aggregate_id":               aggregateID,
+			"expected_aggregate_version": expectedAggregateVersion,
+			"new_aggregate_version":      newVersion,
+		}); err != nil {
 			return fmt.Errorf("update aggregate version: %w", err)
 		} else if ct.RowsAffected() == 0 {
 			return eventsource.ErrConcurrentUpdate
@@ -131,13 +124,15 @@ func (s *Store) saveEvent(
 		return fmt.Errorf("marshal metadata: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO `+s.eventsTable+` (id, aggregate_id, aggregate_version,
-			timestamp, metadata, data)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, event.ID, event.AggregateID, event.AggregateVersion,
-		event.Timestamp, string(metadataBytes), string(dataBytes)); err != nil {
-		return fmt.Errorf("insert: %w", err)
+	if _, err := tx.Exec(ctx, saveEventQuery, pgx.NamedArgs{
+		"id":                event.ID,
+		"aggregate_id":      event.AggregateID,
+		"aggregate_version": event.AggregateVersion,
+		"timestamp":         event.Timestamp,
+		"metadata":          string(metadataBytes),
+		"data":              string(dataBytes),
+	}); err != nil {
+		return err
 	}
 
 	if err := s.saveEventHook(ctx, tx, event); err != nil {

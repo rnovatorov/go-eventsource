@@ -9,13 +9,13 @@ import (
 )
 
 type config struct {
-	schema        string
+	context       context.Context
 	saveEventHook SaveEventHook
 }
 
 func newConfig(opts ...option) config {
 	cfg := config{
-		schema: "eventsource",
+		context: context.Background(),
 		saveEventHook: func(context.Context, pgx.Tx, *eventsource.Event) error {
 			// noop
 			return nil
@@ -34,5 +34,11 @@ type SaveEventHook func(context.Context, pgx.Tx, *eventsource.Event) error
 func WithSaveEventHook(hook SaveEventHook) option {
 	return func(cfg *config) {
 		cfg.saveEventHook = hook
+	}
+}
+
+func WithContext(ctx context.Context) option {
+	return func(cfg *config) {
+		cfg.context = ctx
 	}
 }
