@@ -1,0 +1,9 @@
+BEGIN;
+
+DROP TABLE IF EXISTS books;
+
+DROP TABLE IF EXISTS accounts;
+
+DROP TABLE IF EXISTS transactions;
+
+END;
