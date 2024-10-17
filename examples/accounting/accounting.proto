@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package rnovatorov.eventsource.examples.accounting_events;
+package rnovatorov.eventsource.examples.accounting;
 
 import "google/protobuf/timestamp.proto";
 

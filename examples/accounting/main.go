@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -28,6 +29,10 @@ func run(ctx context.Context) error {
 	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+
 	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return fmt.Errorf("new database pool: %w", err)
@@ -35,6 +40,7 @@ func run(ctx context.Context) error {
 	defer pool.Close()
 
 	eventStore, err := eventstorepostgres.Start(pool,
+		eventstorepostgres.WithLogger(logger),
 		eventstorepostgres.WithSyncEventHandler(
 			postgresadapter.ProjectionUpdater{}))
 	if err != nil {

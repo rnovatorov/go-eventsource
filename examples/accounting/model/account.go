@@ -1,8 +1,10 @@
 package model
 
+import "github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
+
 type Account struct {
 	name    string
-	type_   AccountType
+	type_   accountingpb.AccountType
 	balance uint64
 }
 
@@ -10,7 +12,7 @@ func (a *Account) Name() string {
 	return a.name
 }
 
-func (a *Account) Type() AccountType {
+func (a *Account) Type() accountingpb.AccountType {
 	return a.type_
 }
 
@@ -20,17 +22,17 @@ func (a *Account) Balance() uint64 {
 
 func (a *Account) canDebit(amount uint64) (newBalance uint64, err error) {
 	switch a.type_ {
-	case AccountType_CAPITAL:
+	case accountingpb.AccountType_CAPITAL:
 		return a.canDecreaseBalance(amount)
-	case AccountType_ASSET:
+	case accountingpb.AccountType_ASSET:
 		return a.canIncreaseBalance(amount)
-	case AccountType_LIABILITY:
+	case accountingpb.AccountType_LIABILITY:
 		return a.canDecreaseBalance(amount)
-	case AccountType_INCOME:
+	case accountingpb.AccountType_INCOME:
 		return a.canDecreaseBalance(amount)
-	case AccountType_EXPENSE:
+	case accountingpb.AccountType_EXPENSE:
 		return a.canIncreaseBalance(amount)
-	case AccountType_UNKNOWN:
+	case accountingpb.AccountType_UNKNOWN:
 		fallthrough
 	default:
 		return 0, ErrAccountTypeUnknown
@@ -39,17 +41,17 @@ func (a *Account) canDebit(amount uint64) (newBalance uint64, err error) {
 
 func (a *Account) canCredit(amount uint64) (newBalance uint64, err error) {
 	switch a.type_ {
-	case AccountType_CAPITAL:
+	case accountingpb.AccountType_CAPITAL:
 		return a.canIncreaseBalance(amount)
-	case AccountType_ASSET:
+	case accountingpb.AccountType_ASSET:
 		return a.canDecreaseBalance(amount)
-	case AccountType_LIABILITY:
+	case accountingpb.AccountType_LIABILITY:
 		return a.canIncreaseBalance(amount)
-	case AccountType_INCOME:
+	case accountingpb.AccountType_INCOME:
 		return a.canIncreaseBalance(amount)
-	case AccountType_EXPENSE:
+	case accountingpb.AccountType_EXPENSE:
 		return a.canDecreaseBalance(amount)
-	case AccountType_UNKNOWN:
+	case accountingpb.AccountType_UNKNOWN:
 		fallthrough
 	default:
 		return 0, ErrAccountTypeUnknown

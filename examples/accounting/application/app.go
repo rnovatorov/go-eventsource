@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
 	"github.com/rnovatorov/go-eventsource/examples/accounting/model"
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
@@ -49,7 +50,7 @@ func (a *App) CloseBook(
 
 func (a *App) AddBookAccount(
 	ctx context.Context, bookID string, accountName string,
-	accountType model.AccountType,
+	accountType accountingpb.AccountType,
 ) error {
 	_, err := a.bookRepository.Update(ctx, bookID,
 		model.BookAccountAdd{

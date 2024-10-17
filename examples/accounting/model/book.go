@@ -1,12 +1,11 @@
 package model
 
-//go:generate protoc -I ../../proto --go_out=. --go_opt=Maccounting_events.proto=../model accounting_events.proto
-
 import (
 	"fmt"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
 
@@ -61,7 +60,7 @@ func (b *Book) processCreate(cmd BookCreate) (eventsource.StateChanges, error) {
 	}
 
 	return eventsource.StateChanges{
-		&BookCreated{
+		&accountingpb.BookCreated{
 			Description: cmd.Description,
 		},
 	}, nil
@@ -73,7 +72,7 @@ func (b *Book) processClose(BookClose) (eventsource.StateChanges, error) {
 	}
 
 	return eventsource.StateChanges{
-		&BookClosed{},
+		&accountingpb.BookClosed{},
 	}, nil
 }
 
@@ -90,12 +89,12 @@ func (b *Book) processAccountAdd(cmd BookAccountAdd) (eventsource.StateChanges, 
 		return nil, ErrAccountNameEmpty
 	}
 
-	if cmd.AccountType == AccountType_UNKNOWN {
+	if cmd.AccountType == accountingpb.AccountType_UNKNOWN {
 		return nil, ErrAccountTypeUnknown
 	}
 
 	return eventsource.StateChanges{
-		&BookAccountAdded{
+		&accountingpb.BookAccountAdded{
 			Name: cmd.AccountName,
 			Type: cmd.AccountType,
 		},
@@ -130,7 +129,7 @@ func (b *Book) processTransactionEnter(
 	}
 
 	return eventsource.StateChanges{
-		&BookTransactionEntered{
+		&accountingpb.BookTransactionEntered{
 			Timestamp:                 timestamppb.New(cmd.Transaction.Timestamp),
 			AccountDebited:            cmd.Transaction.AccountDebited,
 			AccountCredited:           cmd.Transaction.AccountCredited,
@@ -143,30 +142,30 @@ func (b *Book) processTransactionEnter(
 
 func (b *Book) ApplyStateChange(stateChange eventsource.StateChange) {
 	switch sc := stateChange.(type) {
-	case *BookCreated:
+	case *accountingpb.BookCreated:
 		b.applyCreated(sc)
-	case *BookClosed:
+	case *accountingpb.BookClosed:
 		b.applyClosed(sc)
-	case *BookAccountAdded:
+	case *accountingpb.BookAccountAdded:
 		b.applyAccountAdded(sc)
-	case *BookTransactionEntered:
+	case *accountingpb.BookTransactionEntered:
 		b.applyTransactionEntered(sc)
 	default:
 		panic(fmt.Sprintf("unexpected state change: %T", sc))
 	}
 }
 
-func (b *Book) applyCreated(sc *BookCreated) {
+func (b *Book) applyCreated(sc *accountingpb.BookCreated) {
 	b.created = true
 	b.description = sc.Description
 	b.accounts = make(map[string]*Account)
 }
 
-func (b *Book) applyClosed(*BookClosed) {
+func (b *Book) applyClosed(*accountingpb.BookClosed) {
 	b.closed = true
 }
 
-func (b *Book) applyAccountAdded(sc *BookAccountAdded) {
+func (b *Book) applyAccountAdded(sc *accountingpb.BookAccountAdded) {
 	b.accounts[sc.Name] = &Account{
 		name:    sc.Name,
 		type_:   sc.Type,
@@ -174,7 +173,7 @@ func (b *Book) applyAccountAdded(sc *BookAccountAdded) {
 	}
 }
 
-func (b *Book) applyTransactionEntered(sc *BookTransactionEntered) {
+func (b *Book) applyTransactionEntered(sc *accountingpb.BookTransactionEntered) {
 	b.accounts[sc.AccountDebited].balance = sc.AccountDebitedNewBalance
 	b.accounts[sc.AccountCredited].balance = sc.AccountCreditedNewBalance
 

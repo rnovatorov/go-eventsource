@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rnovatorov/go-eventsource/examples/accounting/model"
+	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
 
@@ -22,7 +22,7 @@ type accountingService interface {
 	) error
 	AddBookAccount(
 		ctx context.Context, bookID string, accountName string,
-		accountType model.AccountType,
+		accountType accountingpb.AccountType,
 	) error
 	GetBookAccountBalance(
 		ctx context.Context, bookID string, accountName string,
@@ -127,7 +127,8 @@ func (h *Handler) handleBookAccountAdd(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	accountType := model.AccountType(model.AccountType_value[payload.AccountType])
+	accountType := accountingpb.AccountType(
+		accountingpb.AccountType_value[payload.AccountType])
 
 	if err := h.accountingService.AddBookAccount(
 		r.Context(), payload.BookID, payload.AccountName, accountType,

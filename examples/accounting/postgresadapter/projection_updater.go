@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/rnovatorov/go-eventsource/examples/accounting/model"
+	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
 )
 
@@ -21,13 +21,13 @@ func (u ProjectionUpdater) HandleEvent(
 	}
 
 	switch d := data.(type) {
-	case *model.BookCreated:
+	case *accountingpb.BookCreated:
 		return u.handleBookCreated(ctx, tx, event, d)
-	case *model.BookClosed:
+	case *accountingpb.BookClosed:
 		return u.handleBookClosed(ctx, tx, event, d)
-	case *model.BookAccountAdded:
+	case *accountingpb.BookAccountAdded:
 		return u.handleBookAccountAdded(ctx, tx, event, d)
-	case *model.BookTransactionEntered:
+	case *accountingpb.BookTransactionEntered:
 		return u.handleBookTransactionEntered(ctx, tx, event, d)
 	}
 
@@ -35,7 +35,8 @@ func (u ProjectionUpdater) HandleEvent(
 }
 
 func (ProjectionUpdater) handleBookCreated(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event, d *model.BookCreated,
+	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+	d *accountingpb.BookCreated,
 ) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO books (id, closed, description)
@@ -45,7 +46,8 @@ func (ProjectionUpdater) handleBookCreated(
 }
 
 func (ProjectionUpdater) handleBookClosed(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event, _ *model.BookClosed,
+	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+	_ *accountingpb.BookClosed,
 ) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE books
@@ -56,7 +58,8 @@ func (ProjectionUpdater) handleBookClosed(
 }
 
 func (ProjectionUpdater) handleBookAccountAdded(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event, d *model.BookAccountAdded,
+	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+	d *accountingpb.BookAccountAdded,
 ) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO accounts (book_id, name, type, balance)
@@ -66,7 +69,8 @@ func (ProjectionUpdater) handleBookAccountAdded(
 }
 
 func (ProjectionUpdater) handleBookTransactionEntered(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event, d *model.BookTransactionEntered,
+	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+	d *accountingpb.BookTransactionEntered,
 ) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO transactions (book_id, timestamp,
