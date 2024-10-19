@@ -7,6 +7,7 @@ import (
 	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
 	"github.com/rnovatorov/go-eventsource/examples/accounting/model"
 	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
 type App struct {
@@ -15,7 +16,7 @@ type App struct {
 }
 
 type Params struct {
-	EventStore        eventsource.EventStore
+	EventStore        eventstore.Interface
 	ProjectionQueries ProjectionQueries
 }
 

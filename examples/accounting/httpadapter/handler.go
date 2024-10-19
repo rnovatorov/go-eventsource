@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
-	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
 type accountingService interface {
@@ -55,8 +55,8 @@ func NewHandler(s accountingService) *Handler {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if idempotencyKey := r.Header.Get("X-Idempotency-Key"); idempotencyKey != "" {
-		ctx := eventsource.WithMetadata(r.Context(), eventsource.Metadata{
-			eventsource.CausationID: idempotencyKey,
+		ctx := eventstore.WithMetadata(r.Context(), eventstore.Metadata{
+			eventstore.CausationID: idempotencyKey,
 		})
 		r = r.WithContext(ctx)
 	}

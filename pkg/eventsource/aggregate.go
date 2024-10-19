@@ -3,6 +3,8 @@ package eventsource
 import (
 	"context"
 	"fmt"
+
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
 type Aggregate[T any, R aggregateRoot[T]] struct {
@@ -23,7 +25,7 @@ func NewAggregate[T any, R aggregateRoot[T]](id string) *Aggregate[T, R] {
 }
 
 func RehydrateAggregate[T any, R aggregateRoot[T]](
-	id string, events []*Event,
+	id string, events eventstore.Events,
 ) (*Aggregate[T, R], error) {
 	var root R = new(T)
 	var version int
@@ -65,7 +67,7 @@ func (a *Aggregate[T, R]) Root() R {
 }
 
 func (a *Aggregate[T, R]) ProcessCommand(ctx context.Context, cmd Command) error {
-	metadata := MetadataFromContext(ctx)
+	metadata := eventstore.MetadataFromContext(ctx)
 
 	if _, ok := a.causationIDs[metadata.CausationID()]; ok {
 		return ErrCommandAlreadyProcessed

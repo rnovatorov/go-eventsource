@@ -1,10 +1,10 @@
-package eventsource
+package eventstore
 
 import (
 	"context"
 )
 
-type EventStore interface {
+type Interface interface {
 	ListEvents(
 		ctx context.Context, aggregateID string,
 	) (Events, error)

@@ -3,11 +3,11 @@ package eventstoreinmemory
 import (
 	"sync"
 
-	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
 type aggregate struct {
 	sync.RWMutex
 	version int
-	events  eventsource.Events
+	events  eventstore.Events
 }

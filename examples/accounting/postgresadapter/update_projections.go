@@ -7,13 +7,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/rnovatorov/go-eventsource/examples/accounting/accountingpb"
-	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
-type ProjectionUpdater struct{}
-
-func (u ProjectionUpdater) HandleEvent(
-	ctx context.Context, tx pgx.Tx, event *eventsource.Event,
+func UpdateProjections(
+	ctx context.Context, tx pgx.Tx, event *eventstore.Event,
 ) error {
 	data, err := event.Data.UnmarshalNew()
 	if err != nil {
@@ -22,20 +20,20 @@ func (u ProjectionUpdater) HandleEvent(
 
 	switch d := data.(type) {
 	case *accountingpb.BookCreated:
-		return u.handleBookCreated(ctx, tx, event, d)
+		return handleBookCreated(ctx, tx, event, d)
 	case *accountingpb.BookClosed:
-		return u.handleBookClosed(ctx, tx, event, d)
+		return handleBookClosed(ctx, tx, event, d)
 	case *accountingpb.BookAccountAdded:
-		return u.handleBookAccountAdded(ctx, tx, event, d)
+		return handleBookAccountAdded(ctx, tx, event, d)
 	case *accountingpb.BookTransactionEntered:
-		return u.handleBookTransactionEntered(ctx, tx, event, d)
+		return handleBookTransactionEntered(ctx, tx, event, d)
 	}
 
 	return nil
 }
 
-func (ProjectionUpdater) handleBookCreated(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+func handleBookCreated(
+	ctx context.Context, tx pgx.Tx, e *eventstore.Event,
 	d *accountingpb.BookCreated,
 ) error {
 	_, err := tx.Exec(ctx, `
@@ -45,8 +43,8 @@ func (ProjectionUpdater) handleBookCreated(
 	return err
 }
 
-func (ProjectionUpdater) handleBookClosed(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+func handleBookClosed(
+	ctx context.Context, tx pgx.Tx, e *eventstore.Event,
 	_ *accountingpb.BookClosed,
 ) error {
 	_, err := tx.Exec(ctx, `
@@ -57,8 +55,8 @@ func (ProjectionUpdater) handleBookClosed(
 	return err
 }
 
-func (ProjectionUpdater) handleBookAccountAdded(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+func handleBookAccountAdded(
+	ctx context.Context, tx pgx.Tx, e *eventstore.Event,
 	d *accountingpb.BookAccountAdded,
 ) error {
 	_, err := tx.Exec(ctx, `
@@ -68,8 +66,8 @@ func (ProjectionUpdater) handleBookAccountAdded(
 	return err
 }
 
-func (ProjectionUpdater) handleBookTransactionEntered(
-	ctx context.Context, tx pgx.Tx, e *eventsource.Event,
+func handleBookTransactionEntered(
+	ctx context.Context, tx pgx.Tx, e *eventstore.Event,
 	d *accountingpb.BookTransactionEntered,
 ) error {
 	if _, err := tx.Exec(ctx, `

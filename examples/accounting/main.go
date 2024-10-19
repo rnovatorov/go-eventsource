@@ -39,10 +39,9 @@ func run(ctx context.Context) error {
 	}
 	defer pool.Close()
 
-	eventStore, err := eventstorepostgres.Start(pool,
+	eventStore := eventstorepostgres.Start(pool,
 		eventstorepostgres.WithLogger(logger),
-		eventstorepostgres.WithSyncEventHandler(
-			postgresadapter.ProjectionUpdater{}))
+		eventstorepostgres.WithSaveEventHook(postgresadapter.UpdateProjections))
 	if err != nil {
 		return fmt.Errorf("start postgres event store: %w", err)
 	}

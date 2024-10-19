@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/rnovatorov/go-eventsource/pkg/eventsource"
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
-var _ eventsource.EventStore = (*Store)(nil)
+var _ eventstore.Interface = (*Store)(nil)
 
 type Store struct {
 	mu         sync.RWMutex
@@ -22,7 +22,7 @@ func New() *Store {
 
 func (s *Store) ListEvents(
 	ctx context.Context, aggregateID string,
-) (eventsource.Events, error) {
+) (eventstore.Events, error) {
 	agg := s.getAggregate(aggregateID)
 	if agg == nil {
 		return nil, nil
@@ -36,7 +36,7 @@ func (s *Store) ListEvents(
 
 func (s *Store) SaveEvents(
 	ctx context.Context, aggregateID string, expectedAggregateVersion int,
-	events eventsource.Events,
+	events eventstore.Events,
 ) error {
 	agg := s.getOrCreateAggregate(aggregateID)
 
@@ -44,7 +44,7 @@ func (s *Store) SaveEvents(
 	defer agg.Unlock()
 
 	if agg.version != expectedAggregateVersion {
-		return eventsource.ErrConcurrentUpdate
+		return eventstore.ErrConcurrentUpdate
 	}
 
 	for _, event := range events {

@@ -7,10 +7,9 @@ import (
 )
 
 type config struct {
-	context            context.Context
-	logger             *slog.Logger
-	syncEventHandler   SyncEventHandler
-	asyncEventHandlers []AsyncEventHandler
+	context       context.Context
+	logger        *slog.Logger
+	saveEventHook SaveEventHook
 }
 
 func newConfig(opts ...option) config {
@@ -38,22 +37,8 @@ func WithLogger(logger *slog.Logger) option {
 	}
 }
 
-func WithSyncEventHandler(handler SyncEventHandler) option {
+func WithSaveEventHook(hook SaveEventHook) option {
 	return func(cfg *config) {
-		cfg.syncEventHandler = handler
-	}
-}
-
-func WithAsyncEventHandlers(handlers ...AsyncEventHandler) option {
-	seen := make(map[string]bool)
-	for _, h := range handlers {
-		if id := h.SubscriptionID(); !seen[id] {
-			seen[id] = true
-			continue
-		}
-		panic("duplicate subscription ID")
-	}
-	return func(cfg *config) {
-		cfg.asyncEventHandlers = handlers
+		cfg.saveEventHook = hook
 	}
 }

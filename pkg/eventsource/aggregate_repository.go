@@ -8,10 +8,12 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 )
 
 func NewAggregateRepository[T any, R aggregateRoot[T]](
-	eventStore EventStore,
+	eventStore eventstore.Interface,
 ) *AggregateRepository[T, R] {
 	return &AggregateRepository[T, R]{
 		eventStore: eventStore,
@@ -19,7 +21,7 @@ func NewAggregateRepository[T any, R aggregateRoot[T]](
 }
 
 type AggregateRepository[T any, R aggregateRoot[T]] struct {
-	eventStore EventStore
+	eventStore eventstore.Interface
 }
 
 func (r *AggregateRepository[T, R]) Get(
@@ -62,7 +64,7 @@ func (r *AggregateRepository[T, R]) Create(
 	}
 
 	if err := r.Save(ctx, agg); err != nil {
-		if errors.Is(err, ErrConcurrentUpdate) {
+		if errors.Is(err, eventstore.ErrConcurrentUpdate) {
 			return nil, ErrAggregateAlreadyExists
 		}
 		return nil, fmt.Errorf("save: %w", err)
@@ -96,7 +98,7 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 	}
 
 	if err := r.Save(ctx, agg); err != nil {
-		if errors.Is(err, ErrConcurrentUpdate) {
+		if errors.Is(err, eventstore.ErrConcurrentUpdate) {
 			agg, err = r.Load(ctx, id)
 			if err != nil {
 				return nil, fmt.Errorf("load: %w", err)
@@ -156,8 +158,8 @@ func (r *AggregateRepository[T, R]) Save(
 	}
 
 	originalVersion := agg.Version() - len(agg.stateChanges)
-	metadata := MetadataFromContext(ctx)
-	events := make(Events, 0, len(agg.stateChanges))
+	metadata := eventstore.MetadataFromContext(ctx)
+	events := make(eventstore.Events, 0, len(agg.stateChanges))
 
 	for i, stateChange := range agg.stateChanges {
 		id, err := uuid.NewRandom()
@@ -168,7 +170,7 @@ func (r *AggregateRepository[T, R]) Save(
 		if err != nil {
 			return fmt.Errorf("marshal state change: %w", err)
 		}
-		events = append(events, &Event{
+		events = append(events, &eventstore.Event{
 			ID:               id.String(),
 			AggregateID:      agg.ID(),
 			AggregateVersion: originalVersion + i + 1,
