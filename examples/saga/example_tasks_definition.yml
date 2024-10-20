@@ -1,0 +1,27 @@
+- id: task1
+  arguments:
+    - name: arg1
+      staticValue: 10
+    - name: arg2
+      staticValue: 20
+
+- id: task2
+  dependencies:
+    - task1
+  arguments:
+    - name: arg1
+      staticValue: 30
+    - name: arg2
+      resultReference: task1
+
+- id: task3
+  dependencies:
+    - task1
+  arguments:
+    - name: arg2
+      resultReference: task1
+
+- id: task4
+  dependencies:
+    - task2
+    - task3

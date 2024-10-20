@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package rnovatorov.eventsource.examples.saga;
+
+import "google/protobuf/struct.proto";
+
+message ArgumentDefinition {
+    string name = 1;
+    oneof value {
+        google.protobuf.Value static_value = 2;
+        string result_reference = 3;
+    }
+}
+
+message TaskDefinition {
+    string id = 1;
+    repeated string dependencies = 2;
+    string method = 3;
+    repeated ArgumentDefinition arguments = 4;
+    string compensation_method = 5;
+    repeated ArgumentDefinition compensation_arguments = 6;
+}
+
+message TaskRequest {
+    string saga_id = 1;
+    string task_id = 2;
+    string task_method = 3;
+    google.protobuf.Struct task_arguments = 4;
+}
+
+message TaskResponse {
+    string saga_id = 1;
+    string task_id = 2;
+    bool task_aborted = 3;
+    google.protobuf.Value task_result = 4;
+    google.protobuf.Value task_abort_reason = 5;
+}
+
+message CompensationRequest {
+    string saga_id = 1;
+    string task_id = 2;
+    google.protobuf.Struct task_arguments = 3;
+    google.protobuf.Value task_result = 4;
+    string task_compensation_method = 5;
+    google.protobuf.Struct task_compensation_arguments = 6;
+}
+
+message CompensationResponse {
+    string saga_id = 1;
+    string task_id = 2;
+}
+
+message SagaBegun {
+    repeated TaskDefinition task_definitions = 2;
+}
+
+message SagaEnded {
+}
+
+message TaskBegun {
+    string id = 1;
+}
+
+message TaskEnded {
+    string id = 1;
+    google.protobuf.Value result = 2;
+}
+
+message TaskAborted {
+    string id = 1;
+    google.protobuf.Value reason = 2;
+}
+
+message CompensationBegun {
+    string id = 1;
+}
+
+message CompensationEnded {
+    string id = 1;
+}
