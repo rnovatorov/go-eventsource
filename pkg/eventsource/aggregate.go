@@ -75,7 +75,7 @@ func (a *Aggregate[T, R]) ProcessCommand(ctx context.Context, cmd Command) error
 
 	stateChanges, err := a.root.ProcessCommand(cmd)
 	if err != nil {
-		return err
+		return fmt.Errorf("%T: %w", cmd, err)
 	}
 
 	for _, stateChange := range stateChanges {
