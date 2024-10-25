@@ -24,6 +24,8 @@ type Store struct {
 	routines                   *routine.Group
 	pool                       *pgxpool.Pool
 	config                     config
+	listener                   *pgxlisten.Listener
+	listenerReady              chan struct{}
 	eventsSequencedFanout      *pgxlisten.Fanout
 	eventsSequencedFanoutReady chan struct{}
 }
@@ -35,9 +37,13 @@ func Start(pool *pgxpool.Pool, opts ...option) *Store {
 		routines:                   routine.NewGroup(cfg.context),
 		pool:                       pool,
 		config:                     cfg,
+		listenerReady:              make(chan struct{}),
 		eventsSequencedFanoutReady: make(chan struct{}),
 	}
-	s.routines.Go(s.run)
+
+	s.routines.Go(s.runListen)
+	s.routines.Go(s.runSequenceEvents)
+	s.routines.Go(s.runEventsSequencedFanout)
 
 	return s
 }
@@ -46,11 +52,25 @@ func (s *Store) Stop() {
 	s.routines.Stop()
 }
 
-func (s *Store) run(ctx context.Context) error {
-	listener := pgxlisten.StartListener(s.pool)
-	defer listener.Stop()
+func (s *Store) runListen(ctx context.Context) error {
+	s.listener = pgxlisten.StartListener(s.pool)
+	defer s.listener.Stop()
 
-	eventsSequenced := listener.Listen("events.sequenced")
+	close(s.listenerReady)
+
+	<-ctx.Done()
+
+	return nil
+}
+
+func (s *Store) runEventsSequencedFanout(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return nil
+	case <-s.listenerReady:
+	}
+
+	eventsSequenced := s.listener.Listen("es_events.sequenced")
 	defer eventsSequenced.Unlisten()
 
 	s.eventsSequencedFanout = pgxlisten.StartFanout(eventsSequenced)
@@ -58,7 +78,8 @@ func (s *Store) run(ctx context.Context) error {
 
 	close(s.eventsSequencedFanoutReady)
 
-	s.sequenceEventsLoop(ctx, listener)
+	<-ctx.Done()
+
 	return nil
 }
 
@@ -72,15 +93,21 @@ func (s *Store) Subscribe(
 	}
 
 	s.routines.Go(func(ctx context.Context) error {
-		s.handleSubscriptionEventsLoop(ctx, subscriptionID, handler)
+		s.runSubscription(ctx, subscriptionID, handler)
 		return nil
 	})
 
 	return nil
 }
 
-func (s *Store) sequenceEventsLoop(ctx context.Context, listener *pgxlisten.Listener) {
-	eventsInserted := listener.Listen("events.inserted")
+func (s *Store) runSequenceEvents(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return nil
+	case <-s.listenerReady:
+	}
+
+	eventsInserted := s.listener.Listen("es_events.inserted")
 	defer eventsInserted.Unlisten()
 
 	// FIXME: Hard-code.
@@ -90,7 +117,7 @@ func (s *Store) sequenceEventsLoop(ctx context.Context, listener *pgxlisten.List
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-ticker.C:
 		case <-eventsInserted.Notifications():
 		}
@@ -124,7 +151,7 @@ func (s *Store) sequenceEvents(ctx context.Context) error {
 	})
 }
 
-func (s *Store) handleSubscriptionEventsLoop(
+func (s *Store) runSubscription(
 	ctx context.Context, subscriptionID string, handler eventstore.EventHandler,
 ) {
 	select {
@@ -141,11 +168,11 @@ func (s *Store) handleSubscriptionEventsLoop(
 	defer ticker.Stop()
 
 	for {
-		if err := s.handleSubscriptionEvents(
+		if err := s.processSubscriptionEvents(
 			ctx, subscriptionID, handler,
 		); err != nil {
 			s.config.logger.ErrorContext(ctx,
-				"failed to handle subscription events",
+				"failed to process subscription events",
 				slog.String("error", err.Error()),
 				slog.String("subscription_id", subscriptionID))
 		}
@@ -158,9 +185,15 @@ func (s *Store) handleSubscriptionEventsLoop(
 	}
 }
 
-func (s *Store) handleSubscriptionEvents(
+func (s *Store) processSubscriptionEvents(
 	ctx context.Context, subscriptionID string, handler eventstore.EventHandler,
 ) error {
+	if _, err := s.pool.Exec(ctx, populateSubscriptionBacklogQuery, pgx.NamedArgs{
+		"subscription_id": subscriptionID,
+	}); err != nil {
+		return fmt.Errorf("populate backlog: %w", err)
+	}
+
 	for {
 		if err := s.handleSubscriptionEvent(
 			ctx, subscriptionID, handler,
@@ -168,7 +201,7 @@ func (s *Store) handleSubscriptionEvents(
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil
 			}
-			return err
+			return fmt.Errorf("handle event: %w", err)
 		}
 	}
 }
@@ -177,25 +210,26 @@ func (s *Store) handleSubscriptionEvent(
 	ctx context.Context, subscriptionID string, handler eventstore.EventHandler,
 ) error {
 	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		rows, _ := tx.Query(ctx, selectNextSubscriptionEventQuery,
+		rows, _ := tx.Query(ctx, selectSubscriptionEventForProcessingQuery,
 			pgx.NamedArgs{
 				"subscription_id": subscriptionID,
 			})
 		event, err := pgx.CollectExactlyOneRow(rows, s.collectEvent)
 		if err != nil {
-			return fmt.Errorf("select next subscription event: %w", err)
+			return fmt.Errorf("select event for processing: %w", err)
 		}
 
 		if err := handler(ctx, event); err != nil {
 			return fmt.Errorf("event handler: %w", err)
 		}
 
-		if _, err := tx.Exec(ctx, advanceSubscriptionPositionQuery,
+		if _, err := tx.Exec(ctx, completeSubscriptionEventProcessingQuery,
 			pgx.NamedArgs{
 				"subscription_id": subscriptionID,
+				"event_id":        event.ID,
 			},
 		); err != nil {
-			return fmt.Errorf("advance subscription position: %w", err)
+			return fmt.Errorf("complete event processing: %w", err)
 		}
 
 		return nil

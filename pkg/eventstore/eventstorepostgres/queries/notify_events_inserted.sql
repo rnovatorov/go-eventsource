@@ -1,1 +1,1 @@
-NOTIFY "events.inserted";
+NOTIFY "es_events.inserted";

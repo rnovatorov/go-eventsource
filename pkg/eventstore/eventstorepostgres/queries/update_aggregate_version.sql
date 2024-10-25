@@ -1,5 +1,5 @@
 UPDATE
-    aggregates
+    es_aggregates
 SET
     version = @new_aggregate_version
 WHERE

@@ -15,6 +15,7 @@ import (
 	"github.com/rnovatorov/go-eventsource/examples/accounting/application"
 	"github.com/rnovatorov/go-eventsource/examples/accounting/httpadapter"
 	"github.com/rnovatorov/go-eventsource/examples/accounting/postgresadapter"
+	"github.com/rnovatorov/go-eventsource/pkg/eventstore"
 	"github.com/rnovatorov/go-eventsource/pkg/eventstore/eventstorepostgres"
 )
 
@@ -42,15 +43,21 @@ func run(ctx context.Context) error {
 	eventStore := eventstorepostgres.Start(pool,
 		eventstorepostgres.WithLogger(logger),
 		eventstorepostgres.WithSaveEventHook(postgresadapter.UpdateProjections))
-	if err != nil {
-		return fmt.Errorf("start postgres event store: %w", err)
-	}
 	defer eventStore.Stop()
 
 	app := application.New(application.Params{
 		EventStore:        eventStore,
 		ProjectionQueries: postgresadapter.NewProjectionQueries(pool),
 	})
+
+	if err := eventStore.Subscribe(ctx, "mysub", func(
+		ctx context.Context, event *eventstore.Event,
+	) error {
+		logger.Info("processed event", slog.Any("event", event))
+		return nil
+	}); err != nil {
+		return fmt.Errorf("subscribe: %w", err)
+	}
 
 	server := &http.Server{
 		Addr:        os.Getenv("HTTP_SERVER_LISTEN_ADDRESS"),

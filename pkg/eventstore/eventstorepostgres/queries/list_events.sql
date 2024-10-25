@@ -6,7 +6,7 @@ SELECT
     metadata,
     data
 FROM
-    events
+    es_events
 WHERE
     aggregate_id = @aggregate_id
 ORDER BY

@@ -30,9 +30,12 @@ var (
 	//go:embed queries/create_subscription.sql
 	createSubscriptionQuery string
 
-	//go:embed queries/select_next_subscription_event.sql
-	selectNextSubscriptionEventQuery string
+	//go:embed queries/populate_subscription_backlog.sql
+	populateSubscriptionBacklogQuery string
 
-	//go:embed queries/advance_subscription_position.sql
-	advanceSubscriptionPositionQuery string
+	//go:embed queries/select_subscription_event_for_processing.sql
+	selectSubscriptionEventForProcessingQuery string
+
+	//go:embed queries/complete_subscription_event_processing.sql
+	completeSubscriptionEventProcessingQuery string
 )

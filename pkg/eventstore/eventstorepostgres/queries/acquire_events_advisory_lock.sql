@@ -1,2 +1,2 @@
 SELECT
-    pg_advisory_xact_lock('events'::REGCLASS::BIGINT);
+    pg_advisory_xact_lock('es_events'::REGCLASS::BIGINT);

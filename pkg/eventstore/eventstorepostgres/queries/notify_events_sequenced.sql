@@ -1,1 +1,1 @@
-NOTIFY "events.sequenced";
+NOTIFY "es_events.sequenced";
