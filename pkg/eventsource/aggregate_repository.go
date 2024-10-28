@@ -114,6 +114,19 @@ func (r *AggregateRepository[T, R]) GetOrCreate(
 func (r *AggregateRepository[T, R]) Update(
 	ctx context.Context, id string, cmd Command,
 ) (*Aggregate[T, R], error) {
+	agg, err := r.update(ctx, id, cmd)
+	if err != nil {
+		if errors.Is(err, eventstore.ErrConcurrentUpdate) {
+			return r.update(ctx, id, cmd)
+		}
+		return nil, err
+	}
+	return agg, err
+}
+
+func (r *AggregateRepository[T, R]) update(
+	ctx context.Context, id string, cmd Command,
+) (*Aggregate[T, R], error) {
 	agg, err := r.Load(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
